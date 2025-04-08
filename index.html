@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>시간표 앱</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+
+    .color-picker {
+      margin-bottom: 20px;
+    }
+
+    .grid-container {
+      position: relative;
+      width: fit-content;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 50px repeat(6, 1fr);
+      grid-template-rows: 30px repeat(24, 30px);
+    }
+
+    .time-label {
+      grid-column: 1 / 2;
+      text-align: right;
+      padding-right: 5px;
+      font-weight: bold;
+      line-height: 30px;
+      background-color: #f5f5f5;
+      border: 1px solid #ccc;
+    }
+
+    .minute-label {
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      background-color: #eee;
+      line-height: 30px;
+      border: 1px solid #ccc;
+    }
+
+    .cell {
+      border: 1px solid #ddd;
+      cursor: pointer;
+      background-color: white;
+      transition: background-color 0.2s;
+    }
+
+    .cell:hover {
+      background-color: #f0f0f0;
+    }
+
+    .now-line {
+      position: absolute;
+      background-color: red;
+      opacity: 0.8;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="color-picker">
+    <label for="color">색상 선택: </label>
+    <input type="color" id="color" value="#90caf9">
+  </div>
+
+  <div class="grid-container">
+    <div class="grid" id="timetable">
+      <div></div>
+      <div class="minute-label">10분</div>
+      <div class="minute-label">20분</div>
+      <div class="minute-label">30분</div>
+      <div class="minute-label">40분</div>
+      <div class="minute-label">50분</div>
+      <div class="minute-label">60분</div>
+
+      <!-- 시간 행 + 셀 -->
+      <script>
+        const timetable = document.getElementById('timetable');
+        const hours = 24;
+        const minutes = [10, 20, 30, 40, 50, 60];
+
+        for (let hour = 0; hour < hours; hour++) {
+          const label = document.createElement('div');
+          label.className = 'time-label';
+          label.textContent = `${hour}시`;
+          timetable.appendChild(label);
+
+          for (let m of minutes) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.hour = hour;
+            cell.dataset.minute = m;
+            cell.dataset.colored = 'false';
+            timetable.appendChild(cell);
+          }
+        }
+      </script>
+    </div>
+
+    <!-- 현재 시간 선 -->
+    <div id="nowLine" class="now-line"></div>
+  </div>
+
+  <script>
+    const colorPicker = document.getElementById('color');
+    let firstClick = null;
+    let secondClick = null;
+
+    const cellHeight = 30;
+    const cellWidth = document.querySelector('.cell').offsetWidth;
+    const timetableGrid = document.querySelector('.grid');
+
+    // 셀 클릭 처리
+    timetableGrid.addEventListener('click', (e) => {
+      const cell = e.target;
+      if (!cell.classList.contains('cell')) return;
+
+      const hour = parseInt(cell.dataset.hour);
+      const minute = parseInt(cell.dataset.minute);
+
+      if (firstClick === null) {
+        firstClick = { hour, minute };
+      } else {
+        secondClick = { hour, minute };
+        fillCellsBetween(firstClick, secondClick);
+        firstClick = null;
+        secondClick = null;
+      }
+    });
+
+    // 시간 -> index 변환
+    function timeToIndex(hour, minute) {
+      return hour * 6 + (minute / 10 - 1);
+    }
+
+    // 셀 색칠 or 제거
+    function fillCellsBetween(start, end) {
+      const startIndex = timeToIndex(start.hour, start.minute);
+      const endIndex = timeToIndex(end.hour, end.minute);
+      const min = Math.min(startIndex, endIndex);
+      const max = Math.max(startIndex, endIndex);
+
+      const cells = document.querySelectorAll('.cell');
+      for (let i = 0; i < cells.length; i++) {
+        if (i >= min && i <= max) {
+          const cell = cells[i];
+          if (cell.dataset.colored === 'true') {
+            cell.style.backgroundColor = 'white';
+            cell.dataset.colored = 'false';
+          } else {
+            cell.style.backgroundColor = colorPicker.value;
+            cell.dataset.colored = 'true';
+          }
+        }
+      }
+    }
+
+    // 현재 시간 선 그리기
+    function drawNowLine() {
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+
+      const row = hour;
+      const colFloat = minute / 10; // 예: 23분 = 2.3
+
+      const x = 50 + colFloat * (cellWidth); // x 위치 (왼쪽 라벨 제외)
+      const y = 30 + row * cellHeight; // y 위치 (위쪽 분 라벨 제외)
+
+      const nowLine = document.getElementById('nowLine');
+      nowLine.style.left = `${x}px`;
+      nowLine.style.top = `${y}px`;
+      nowLine.style.width = `${cellWidth / 6}px`;
+      nowLine.style.height = `${cellHeight}px`;
+    }
+
+    drawNowLine();
+    setInterval(drawNowLine, 60000); // 1분마다 업데이트
+  </script>
+
+</body>
+</html>
